@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">LocalLedger</string>
+    <string name="accessibility_service_description">仅在用户主动开启后，用于微信和支付宝通知缺失时辅助识别交易</string>
+</resources>
