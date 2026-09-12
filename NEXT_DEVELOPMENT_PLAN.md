@@ -23,7 +23,28 @@
 - [ ] **账单行减密**：同日内行间分隔线只保留组末（isLast 已有）；副标题 `09/12 17:51 | 通知 | 微信` → `微信 · 17:51`（"通知"来源仅手工/编辑等异常态才标注）；日期组头已有日收支小计，保留。
 - [ ] **分类图标映射**：`categoryIconChar` 首字圆牌 → `name → (Material Icon, 分类色)` 映射表（餐饮 restaurant/购物 shopping_cart/交通 directions_subway/住房 home/通讯 smartphone/学习 school/医疗 medical_services/其他 receipt_long），未知名回退 receipt_long+中性色；色板进 `LedgerColors` 体系，禁 emoji。
 - [ ] **卡片降噪（token 化）**：卡底与页面底色色差压到近乎不可辨（截图卡底 #EBE1E5 偏紫粉、白列表裸露，深浅交替碎）；统一 elevation 0、圆角 Card=16dp/Emphasis=20dp 两档、间距 4/8 网格全量梳理。FAB 提色为主题 accent（现与背景同色族沉底）。页面渐变两端色差压缩到接近纯色。
-- [ ] **色板翻译**：外部文档方案 A 色值仅作基调参考，翻译进 `LightLedgerColors/DarkLedgerColors` 语义字段（含暗色等对比度变体，文档没给暗色方案需自配）；对比度修正：支出红白底 <4.5:1 的用 #B93A3A 级深色或限 ≥18sp bold；次要文字暗色变体单独调。屏幕层零 `Color(0x…)` 规矩不破。
+- [ ] **色板翻译**：执行基准以下节「莱茵风格双主题」token 表为准；屏幕层零 `Color(0x…)` 规矩不破，全部经 `LightLedgerColors/DarkLedgerColors` 语义字段落地。
+
+### 全 App 皮肤：莱茵实验室风双主题（Rhine Terminal）——B 方案定稿（2026-09-12）
+
+> 参考站 https://rhine.lubeiluchen.cc/ 风格，色值取自其实站 CSS 提取（非想象），工业实验室档案风。
+> 亮暗双主题同一语言：暗=仪器黑面板，亮=档案纸面板。与 Dashboard 化同车实施、互补：Dashboard 管信息架构，本皮肤管视觉语言（hairline 分层、去大圆角卡与减密方向天然一致）。
+> **字体决议（用户定）：全 App 仅系统 sans-serif**——不打包字体、不用 monospace；金额对齐用 `TextStyle(fontFeatureSettings = "tnum")` 开比例字体的 tabular figures。
+> **本节点覆盖 Dashboard 节两处设定**：圆角 16/20dp → 2/4dp；账单行分隔符「·」→「／」。其余以 Dashboard 节为准。
+
+**暗色 token（仪器黑）**：pageBackground `#080A08` 纯色；surface `#0F120E`；描边 `#242622`；ink/次级/三级 `#E8E5E1`/`#BDB8AD`/`#77756D`；accent `#A67D48`（莱茵琥珀，全页唯一彩度源）；income `#A9B38A` / expense `#D98A7A`（低饱和橄榄/赤陶）。
+
+**亮色 token（档案纸）**：pageBackground `#ECE9E4` 纯色；surface `#FFFDF8`；描边 `#D0C6B5`；ink/次级/三级 `#24221F`/`#776F60`/`#8E897B`；accent 大字号 `#9B7247`、正文小字 `#7A5834`（原值 3.7:1 不达 AA，小字号必须加深）；income `#565C46` / expense `#A8402E`。
+
+- [ ] `Color.kt` 双主题 token 重写 + `Theme.kt` Material3 colorScheme 同步对齐（primary/surface 系列跟同一族色，防止未走语义层的组件漏色）。
+- [ ] 卡角括号母题：`drawBehind` 四角 L 形描边替代大圆角卡；圆角 token 收紧为 small=2dp / medium=4dp。
+- [ ] hairline 分层：`tonalElevation` 恒 0、阴影全禁；FAB 是唯一 elevation>0 组件（accent 琥珀底黑字）。
+- [ ] 区块英文档案标签：9sp 全大写 `letterSpacing=0.1em`（`MONTHLY OVERVIEW`、`PENDING ／ 07`），`semantics { invisibleToUser }` 防读屏器朗读；仅限区块标题区，列表行内禁用。
+- [ ] 金额/数字行统一 `tnum` 特性；金额右对齐保持。
+- [ ] 冷启动 boot phrase 打字机一屏（≤1.2s，点按跳过；`isReducedMotion()` 下直接跳过）。
+- [ ] 对比度红线：正文 ≥4.5:1，≥18sp bold 或 ≥24sp 允许 3:1；落地时 WCAG 公式复算，只许调深不许降标。
+
+**明确不抄**：原站 WebGL 3D 档案、`--rn-blur` 动态模糊、纯暗色单主题（户外强光记账是硬场景，双主题必须保留）。
 
 **否决清单（勿复议）**：月份切换（全 App 隐式"当前月"参数化，牵动所有 DAO/统计/预算，留待 2.7 ViewModel 化后再议）；emoji 图标（跨设备渲染/主题色/暗色三雷）；直接抄十六进制色值到屏幕层；环比"较上月"降级 P1——只做"日均环比"口径，上月无数据或本月前 3 天隐藏整行。
 
