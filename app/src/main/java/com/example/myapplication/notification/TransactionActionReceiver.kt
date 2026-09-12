@@ -6,6 +6,7 @@ import android.content.Intent
 import com.example.localledger.LocalLedgerApplication
 import com.example.localledger.data.database.TransactionEntity
 import com.example.localledger.data.database.TransactionStatus
+import androidx.core.app.NotificationManagerCompat
 import androidx.room.withTransaction
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -13,7 +14,7 @@ import kotlinx.coroutines.launch
 
 class TransactionActionReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action != ACTION_CONFIRM) return
+        if (intent.action != ACTION_CONFIRM && intent.action != ACTION_IGNORE) return
         val candidateId = intent.getStringExtra(EXTRA_CANDIDATE_ID) ?: return
         val pendingResult = goAsync()
         val app = context.applicationContext as LocalLedgerApplication
@@ -21,6 +22,12 @@ class TransactionActionReceiver : BroadcastReceiver() {
             try {
                 val database = app.database
                 val candidate = database.candidateDao().findById(candidateId) ?: return@launch
+                if (intent.action == ACTION_IGNORE) {
+                    database.candidateDao().updateStatus(candidate.id, TransactionStatus.IGNORED)
+                    val notificationId = intent.getIntExtra(EXTRA_NOTIFICATION_ID, candidate.id.hashCode())
+                    NotificationManagerCompat.from(context).cancel(notificationId)
+                    return@launch
+                }
                 database.withTransaction {
                     if (candidate.status == TransactionStatus.PENDING) {
                         database.transactionDao().upsert(
@@ -43,13 +50,15 @@ class TransactionActionReceiver : BroadcastReceiver() {
                         database.candidateDao().updateStatus(candidate.id, TransactionStatus.CONFIRMED)
                     }
                 }
+                val notificationId = intent.getIntExtra(EXTRA_NOTIFICATION_ID, candidate.id.hashCode())
+                NotificationManagerCompat.from(context).cancel(notificationId)
                 LedgerNotificationNotifier.postRecorded(
                     context = context,
                     amountMinor = candidate.amountMinor,
                     merchant = candidate.merchant,
                     type = candidate.type,
                     status = TransactionStatus.CONFIRMED,
-                    notificationId = candidate.id.hashCode(),
+                    notificationId = notificationId,
                     requestPromotion = true,
                     paymentMethod = candidate.sourcePackage
                 )
@@ -61,6 +70,8 @@ class TransactionActionReceiver : BroadcastReceiver() {
 
     companion object {
         const val ACTION_CONFIRM = "com.example.localledger.action.CONFIRM_TRANSACTION"
+        const val ACTION_IGNORE = "com.example.localledger.action.IGNORE_TRANSACTION"
         const val EXTRA_CANDIDATE_ID = "candidate_id"
+        const val EXTRA_NOTIFICATION_ID = "notification_id"
     }
 }

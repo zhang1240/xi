@@ -16,3 +16,9 @@ Transfer Dock_Text_20260822151554.txt
 .externalNativeBuild
 .cxx
 local.properties
+
+# Local JDK runtime (not part of project sources)
+java-runtime-gamma-snapshot/
+.tmp_gradle_run/
+
+.tmp_gradle975/

@@ -15,9 +15,9 @@ android {
         applicationId = "com.example.localledger"
         minSdk = 31
         targetSdk = 37
-        versionCode = providers.gradleProperty("appVersionCode").orElse("14").get().toInt()
-        val versionBase = providers.gradleProperty("appVersionBase").orElse("2.0").get()
-        val versionWord = providers.gradleProperty("appVersionWord").orElse("axis").get()
+        versionCode = providers.gradleProperty("appVersionCode").orElse("15").get().toInt()
+        val versionBase = providers.gradleProperty("appVersionBase").orElse("2.1").get()
+        val versionWord = providers.gradleProperty("appVersionWord").orElse("flux").get()
         versionName = if (versionWord == "a") "$versionBase$versionWord" else "$versionBase-$versionWord"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

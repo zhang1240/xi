@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
@@ -27,6 +28,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.localledger.ui.screens.HomeScreen
+import com.example.localledger.ui.screens.PendingScreen
 import com.example.localledger.ui.screens.SettingsScreen
 import com.example.localledger.ui.screens.StatisticsScreen
 import com.example.localledger.ui.screens.TransactionsScreen
@@ -46,6 +48,7 @@ private val destinations = listOf(
     AppDestination("home", "首页", Icons.Default.Home),
     AppDestination("transactions", "账单", Icons.Default.ReceiptLong),
     AppDestination("statistics", "统计", Icons.Default.BarChart),
+    AppDestination("pending", "待确认", Icons.Default.List),
     AppDestination("settings", "设置", Icons.Default.Settings)
 )
 
@@ -124,7 +127,22 @@ private fun LocalLedgerApp(database: AppDatabase, preferences: AppPreferences) {
             }
         ) { paddingValues ->
             NavHost(navController, startDestination = "home") {
-                composable("home") { HomeScreen(paddingValues, database, preferences) }
+                composable("home") {
+                    HomeScreen(
+                        paddingValues = paddingValues,
+                        database = database,
+                        preferences = preferences,
+                        onOpenPending = { navController.navigate("pending") },
+                        onOpenTransactions = { navController.navigate("transactions") }
+                    )
+                }
+                composable("pending") {
+                    PendingScreen(
+                        paddingValues = paddingValues,
+                        database = database,
+                        onBack = { navController.popBackStack() }
+                    )
+                }
                 composable("transactions") { TransactionsScreen(paddingValues, database) }
                 composable("statistics") { StatisticsScreen(paddingValues, database) }
                 composable("settings") { SettingsScreen(paddingValues, database, preferences) }

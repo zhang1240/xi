@@ -25,6 +25,9 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions ORDER BY timestamp")
     suspend fun getAll(): List<TransactionEntity>
 
+    @Query("UPDATE transactions SET merchant = :merchant WHERE id = :id")
+    suspend fun fillMerchantById(id: String, merchant: String?): Int
+
     @Query("UPDATE transactions SET merchant = :merchant WHERE sourcePackage = :sourcePackage AND amountMinor = :amountMinor AND timestamp BETWEEN :from AND :to AND merchant IS NULL")
     suspend fun fillMerchantForRecent(sourcePackage: String, amountMinor: Long, from: Long, to: Long, merchant: String): Int
 
@@ -88,6 +91,9 @@ interface CandidateDao {
 
     @Query("SELECT * FROM transaction_candidates ORDER BY timestamp")
     suspend fun getAll(): List<TransactionCandidateEntity>
+
+    @Query("UPDATE transaction_candidates SET merchant = :merchant WHERE id = :id")
+    suspend fun fillMerchantById(id: String, merchant: String?): Int
 
     @Query("UPDATE transaction_candidates SET merchant = :merchant WHERE sourcePackage = :sourcePackage AND amountMinor = :amountMinor AND timestamp BETWEEN :from AND :to AND merchant IS NULL")
     suspend fun fillMerchantForRecent(sourcePackage: String, amountMinor: Long, from: Long, to: Long, merchant: String): Int

@@ -8,6 +8,7 @@ import android.content.Intent
 import android.app.PendingIntent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -19,6 +20,7 @@ object LedgerNotificationNotifier {
     private const val CHANNEL_ID = "ledger_updates"
     private const val SERVICE_CHANNEL_ID = "ledger_service"
     private const val CHANNEL_NAME = "记账动态"
+    private const val ACCESSIBILITY_OFF_NOTIFICATION_ID = 7201
 
     fun createChannel(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
@@ -87,6 +89,7 @@ object LedgerNotificationNotifier {
             val confirmIntent = Intent(context, TransactionActionReceiver::class.java).apply {
                 this.action = TransactionActionReceiver.ACTION_CONFIRM
                 putExtra(TransactionActionReceiver.EXTRA_CANDIDATE_ID, candidateId)
+                putExtra(TransactionActionReceiver.EXTRA_NOTIFICATION_ID, notificationId)
             }
             val confirmPendingIntent = PendingIntent.getBroadcast(
                 context,
@@ -99,6 +102,24 @@ object LedgerNotificationNotifier {
                     R.drawable.ic_stat_localledger,
                     "确认",
                     confirmPendingIntent
+                ).build()
+            )
+            val ignoreIntent = Intent(context, TransactionActionReceiver::class.java).apply {
+                this.action = TransactionActionReceiver.ACTION_IGNORE
+                putExtra(TransactionActionReceiver.EXTRA_CANDIDATE_ID, candidateId)
+                putExtra(TransactionActionReceiver.EXTRA_NOTIFICATION_ID, notificationId)
+            }
+            val ignorePendingIntent = PendingIntent.getBroadcast(
+                context,
+                notificationId + 1,
+                ignoreIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            builder.addAction(
+                NotificationCompat.Action.Builder(
+                    R.drawable.ic_stat_localledger,
+                    "忽略",
+                    ignorePendingIntent
                 ).build()
             )
         }
@@ -122,6 +143,30 @@ object LedgerNotificationNotifier {
             .setOnlyAlertOnce(true)
             .setOngoing(true)
         NotificationManagerCompat.from(context).notify(notificationId, builder.build())
+    }
+
+    fun postAccessibilityDisabled(context: Context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) return
+        val openSettings = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+        val settingsPendingIntent = PendingIntent.getActivity(
+            context,
+            ACCESSIBILITY_OFF_NOTIFICATION_ID,
+            openSettings,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val content = "无障碍自动记账已关闭，微信和支付宝将无法自动识别。请重新开启以恢复自动记账。"
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_stat_localledger)
+            .setContentTitle("LocalLedger 自动记账已关闭")
+            .setContentText(content)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(content))
+            .setCategory(NotificationCompat.CATEGORY_ERROR)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(settingsPendingIntent)
+            .setAutoCancel(true)
+        NotificationManagerCompat.from(context).notify(ACCESSIBILITY_OFF_NOTIFICATION_ID, builder.build())
     }
 
     private fun baseBuilder(context: Context, requestPromotion: Boolean): NotificationCompat.Builder {

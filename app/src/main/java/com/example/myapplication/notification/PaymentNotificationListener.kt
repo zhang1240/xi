@@ -10,7 +10,12 @@ class PaymentNotificationListener : NotificationListenerService() {
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
-        processor.process(sbn)
+        // 单条通知解析失败不能拖垮监听服务。
+        try {
+            processor.process(sbn)
+        } catch (_: Throwable) {
+            // 系统会在服务空闲时继续接收后续通知。
+        }
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification) {

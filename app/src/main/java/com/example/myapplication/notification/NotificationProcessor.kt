@@ -100,49 +100,35 @@ class NotificationProcessor(private val context: Context, private val database: 
 
     private suspend fun persist(packageName: String, parsed: ParsedPayment, timestamp: Long, source: String, key: String, allowCreate: Boolean): PersistResult? {
         return database.withTransaction {
-            val from = timestamp - 5 * 60_000L
-            val to = timestamp + 5 * 60_000L
-            if (source == "ACCESSIBILITY" && !parsed.merchant.isNullOrBlank()) {
-                val updatedTransaction = database.transactionDao().fillMerchantForRecent(packageName, parsed.amountMinor, from, to, parsed.merchant)
-                val updatedCandidate = database.candidateDao().fillMerchantForRecent(packageName, parsed.amountMinor, from, to, parsed.merchant)
-                if (updatedTransaction > 0 || updatedCandidate > 0) {
-                    val existingCandidate = database.candidateDao().findRecentBySourceAmount(packageName, parsed.amountMinor, from, to)
-                    return@withTransaction PersistResult(
-                        if (updatedCandidate > 0) TransactionStatus.PENDING else TransactionStatus.CONFIRMED,
-                        existingCandidate?.id,
-                        shouldNotify = true
-                    )
+            // 统一去重：同一笔真实交易可能先被通知监听捕获，再被无障碍读取，或确认后再次被重新读取。
+            // 只要在窗口内存在金额、类型、商户（可为空）都匹配的既存账单/候选，就只补全信息并静默，
+            // 不再重复入库，也不重复推通知。被忽略的候选也会静默，避免反复打扰。
+            val from = timestamp - 10 * 60_000L
+            val to = timestamp + 10 * 60_000L
+            val recentCandidate = database.candidateDao().findRecentMatching(
+                packageName, parsed.amountMinor, parsed.transactionType, parsed.merchant, from, to
+            )
+            if (recentCandidate != null) {
+                if (recentCandidate.merchant.isNullOrBlank() && !parsed.merchant.isNullOrBlank()) {
+                    database.candidateDao().fillMerchantById(recentCandidate.id, parsed.merchant)
                 }
-            }
-            if (source == "ACCESSIBILITY") {
-                val recentCandidate = database.candidateDao().findRecentBySourceAmount(packageName, parsed.amountMinor, from, to)
-                if (recentCandidate != null) return@withTransaction PersistResult(TransactionStatus.PENDING, recentCandidate.id, shouldNotify = false)
-                val recentTransaction = database.transactionDao().findRecentBySourceAmount(packageName, parsed.amountMinor, from, to)
-                if (recentTransaction != null) return@withTransaction PersistResult(TransactionStatus.CONFIRMED, null, shouldNotify = false)
-                if (!allowCreate) return@withTransaction null
-            }
-            if (source == "NOTIFICATION") {
-                val notificationFrom = timestamp - 120_000L
-                val notificationTo = timestamp + 120_000L
-                val recentCandidate = database.candidateDao().findRecentMatching(
-                    packageName, parsed.amountMinor, parsed.transactionType, parsed.merchant, notificationFrom, notificationTo
+                val shouldStayPending = recentCandidate.status == TransactionStatus.PENDING
+                return@withTransaction PersistResult(
+                    status = if (shouldStayPending) TransactionStatus.PENDING else TransactionStatus.CONFIRMED,
+                    candidateId = if (shouldStayPending) recentCandidate.id else null,
+                    shouldNotify = false
                 )
-                if (recentCandidate != null) {
-                    if (recentCandidate.merchant == null && !parsed.merchant.isNullOrBlank()) {
-                        database.candidateDao().fillMerchantForRecent(packageName, parsed.amountMinor, notificationFrom, notificationTo, parsed.merchant)
-                    }
-                    return@withTransaction PersistResult(TransactionStatus.PENDING, recentCandidate.id, shouldNotify = false)
-                }
-                val recentTransaction = database.transactionDao().findRecentMatching(
-                    packageName, parsed.amountMinor, parsed.transactionType, parsed.merchant, notificationFrom, notificationTo
-                )
-                if (recentTransaction != null) {
-                    if (recentTransaction.merchant == null && !parsed.merchant.isNullOrBlank()) {
-                        database.transactionDao().fillMerchantForRecent(packageName, parsed.amountMinor, notificationFrom, notificationTo, parsed.merchant)
-                    }
-                    return@withTransaction PersistResult(TransactionStatus.CONFIRMED, null, shouldNotify = false)
-                }
             }
+            val recentTransaction = database.transactionDao().findRecentMatching(
+                packageName, parsed.amountMinor, parsed.transactionType, parsed.merchant, from, to
+            )
+            if (recentTransaction != null) {
+                if (recentTransaction.merchant.isNullOrBlank() && !parsed.merchant.isNullOrBlank()) {
+                    database.transactionDao().fillMerchantById(recentTransaction.id, parsed.merchant)
+                }
+                return@withTransaction PersistResult(TransactionStatus.CONFIRMED, null, shouldNotify = false)
+            }
+            if (!allowCreate) return@withTransaction null
             if (database.candidateDao().findByDeduplicationKey(key) != null ||
                 database.transactionDao().findByDeduplicationKey(key) != null
             ) return@withTransaction null
@@ -154,10 +140,11 @@ class NotificationProcessor(private val context: Context, private val database: 
             database.accountDao().upsert(AccountEntity(id = accountId, name = accountName(parsed.paymentMethod)))
             database.categoryDao().upsert(CategoryEntity(id = categoryId, name = rule?.categoryId?.let { categoryDecision.categoryId } ?: categoryDecision.categoryId))
 
-            val canAutoConfirm = source == "NOTIFICATION" &&
-                parsed.paymentMethod != null &&
-                !parsed.merchant.isNullOrBlank() &&
-                parsed.confidence >= 80
+            // 微信/支付宝已深度适配：金额+方向解析成功即自动记账，保持无感；
+            // 其它来源（银行、短信等）仍需要高置信且信息完整，否则进待确认，避免误记。
+            val isAdapted = parsed.paymentMethod != null && parsed.paymentMethod in setOf("WECHAT", "ALIPAY")
+            val autoConfirmThreshold = if (isAdapted) 70 else 80
+            val canAutoConfirm = isAdapted && parsed.confidence >= autoConfirmThreshold
             val status = if (canAutoConfirm) TransactionStatus.CONFIRMED else TransactionStatus.PENDING
             val candidate = TransactionCandidateEntity(
                 amountMinor = parsed.amountMinor,

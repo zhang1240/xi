@@ -6,6 +6,8 @@
     <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <application
         android:name=".LocalLedgerApplication"
@@ -40,7 +42,7 @@
             android:name=".accessibility.PaymentAccessibilityService"
             android:description="@string/accessibility_service_description"
             android:exported="true"
-            android:label="LocalLedger 备选记账服务"
+            android:label="LocalLedger 自动记账服务"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
@@ -58,6 +60,22 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="local_ledger_notification_listener" />
         </service>
+        <receiver
+            android:name=".service.LedgerHeartbeatReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.example.localledger.action.HEARTBEAT" />
+            </intent-filter>
+        </receiver>
+        <receiver
+            android:name=".service.LedgerBootReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
         <receiver
             android:name=".notification.TransactionActionReceiver"
             android:exported="false" />
