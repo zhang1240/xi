@@ -1,19 +1,21 @@
 # LocalLedger 版本管理
 
-当前版本：`2.4-breeze`（versionCode `18`）
+当前版本：`2.5-prism`（versionCode `19`）
 
 下一版本：待定
 
-当前版本（2.4）已完成：通知去重与无感记录。统一通知监听/无障碍/确认后再识别三条路径的去重，避免重复入库与重复通知；微信与支付宝达到 70% 置信度即自动记账，无需手动确认；实况通知新增“忽略”按钮；首页汇总卡与二级菜单（账单/统计/设置/待确认）布局与对齐优化。
+当前版本（2.5）已完成：UI 修复与暗色模式。引入 LedgerColors 语义色板（浅/深两套）经 LocalLedgerColors 注入，屏幕层清零硬编码颜色，修复深色模式半深半浅；预算波形去掉常驻 60fps 重绘，仅进度变化时流动，并尊重系统"移除动画"开关；备份密码遮蔽显示；记账与预算表单启用数字键盘且内容可滚动；删除账单支持撤销；金额格式固定区域设置并修复德语区预算预填解析失败；首页支出图改为近 7 天带星期标签；空状态增加引导与操作；统计按分类名聚合。
+
+上一版本（2.4-breeze）：通知去重与无感记录。统一通知监听/无障碍/确认后再识别三条路径的去重，避免重复入库与重复通知；微信与支付宝达到 70% 置信度即自动记账，无需手动确认；实况通知新增“忽略”按钮；首页汇总卡与二级菜单（账单/统计/设置/待确认）布局与对齐优化。
 
 版本值集中在根目录 `gradle.properties`：
 
 ```properties
-appVersionCode=18
-appVersionBase=2.4
-appVersionWord=breeze
-nextAppVersionCode=19
-nextAppVersionBase=2.5
+appVersionCode=19
+appVersionBase=2.5
+appVersionWord=prism
+nextAppVersionCode=20
+nextAppVersionBase=2.6
 nextAppVersionWord=_
 ```
 
@@ -52,3 +54,4 @@ nextAppVersionWord=_
 | 2.2   | `gale`   | 大风      |
 | 2.3   | `hush`   | 安静、悄无声息  |
 | 2.4   | `breeze`  | 微风、轻快无感  |
+| 2.5   | `prism`  | 棱镜：一套色板拆出浅深两束光 |
